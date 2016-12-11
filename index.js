@@ -48,6 +48,9 @@ function c4Accessory(log, config, api) {
       }
       this.skipUpdate = false;
     }.bind(this));
+    statePoll.on("error", function(error) {
+      this.log.error(error.message);
+    }.bind(this));
   }
   if (this.refreshInterval > 0 && this.hasLevel === "yes") {
     var levelPoll = pollingtoevent(
@@ -65,6 +68,9 @@ function c4Accessory(log, config, api) {
           break;
       }
       this.skipUpdate = false;
+    }.bind(this));
+    levelPoll.on("error", function(error) {
+      this.log.error(error.message);
     }.bind(this));
   }
 }
@@ -211,7 +217,7 @@ function getDeviceVariables(baseURL, proxyID, variableIDs, callback) {
     json:true
   },
   function(error, response, body) {
-    callback(error, response.toJSON().body)
+    callback(error, response && response.toJSON().body)
   })
 };
 
@@ -231,6 +237,6 @@ function setDeviceVariables(baseURL, proxyID, variableID, newValue, callback) {
     json:true
   },
   function(error, response, body) {
-    callback(error, response.toJSON().body)
+    callback(error, response && response.toJSON().body)
   })
 };
