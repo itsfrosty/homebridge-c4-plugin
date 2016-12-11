@@ -1,0 +1,32 @@
+{
+  "name": "homebridge-c4-plugin",
+  "version": "1.0.0",
+  "description": "Homebridge plugin for control4",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=0.12.0",
+    "homebridge": ">=0.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/itsfrosty/homebridge-c4-plugin"
+  },
+  "keywords": [
+    "control4",
+    "homebridge-plugin",
+    "homebridge-c4-plugin"
+  ],
+  "author": "itsfrosty",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/itsfrosty/homebridge-c4-plugin/issues"
+  },
+  "homepage": "https://github.com/itsfrosty/homebridge-c4-plugin",
+  "dependencies": {
+    "polling-to-event": "^2.0.2",
+    "request": "^2.78.0"
+  }
+}
