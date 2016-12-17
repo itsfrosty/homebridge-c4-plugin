@@ -40,8 +40,8 @@ function c4Accessory(log, config, api) {
       this.skipUpdate = true;
       switch(this.deviceType) {
         case "light":
-          if (this.lightService) {
-            this.lightService.getCharacteristic(Characteristic.On)
+          if (this.service) {
+            this.service.getCharacteristic(Characteristic.On)
               .setValue(value);
           }
           break;
@@ -61,8 +61,8 @@ function c4Accessory(log, config, api) {
       this.skipUpdate = true;
       switch(this.deviceType) {
         case "light":
-          if (this.lightService) {
-            this.lightService.getCharacteristic(Characteristic.Brightness)
+          if (this.service) {
+            this.service.getCharacteristic(Characteristic.Brightness)
     				  .setValue(value);
           }
           break;
@@ -91,19 +91,19 @@ c4Accessory.prototype.getServices = function() {
 
   switch (this.deviceType) {
     case "light":
-      this.lightService = new Service.Lightbulb(this.name);
-      this.lightService
+      this.service = new Service.Lightbulb(this.name);
+      this.service
         .getCharacteristic(Characteristic.On)
         .on('get', this.getState.bind(this))
         .on('set', this.setState.bind(this));
 
       if (this.hasLevel == "yes") {
-        this.lightService
+        this.service
           .addCharacteristic(new Characteristic.Brightness())
           .on('get', this.getLevel.bind(this))
           .on('set', this.setLevel.bind(this));
       }
-      return [informationService, this.lightService];
+      return [informationService, this.service];
   }
 };
 
