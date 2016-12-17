@@ -17,21 +17,41 @@ future revs.
 - Find the proxy_id & variable_ids for each of your devices and include them
 in your homebridge config.json.
 
+Known Issues:
+--------------
+- Updating thermostat mode is not working
+
 
 Sample Homebridge Config:
 --------------------------
 ~~~~
 "accessories": [
   {
-   "accessory": "c4",
-    "name": "Bedroom Lights",
+    "accessory": "c4",
+    "name": "Stair Light",
     "device_type": "light",
-    "proxy_id": "25",
-    "level_variable_id": "1001",
-    "state_variable_id": "1000",
+    "proxy_id": "94",
+    "variable_ids": {
+      "level": "1001",
+      "state": "1000"
+    },
     "base_url": "http://192.168.1.142:9000",
-    "has_level": "yes",
-    "has_state": "yes",
+    "refresh_interval": 2000
+  },
+  {
+    "accessory": "c4",
+    "name": "Bedroom",
+    "device_type": "thermostat",
+    "proxy_id": "36",
+    "variable_ids": {
+      "current_state": "1107",
+      "target_state": "1104",
+      "current_temperature": "1130",
+      "heatpoint": "1132",
+      "coolpoint": "1134",
+      "unit": "1100"
+    },
+    "base_url": "http://192.168.1.142:9000",
     "refresh_interval": 2000
   }
 ]
