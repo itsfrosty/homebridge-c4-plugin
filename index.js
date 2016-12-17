@@ -2,74 +2,78 @@ var request = require("request");
 var pollingtoevent = require('polling-to-event');
 var url = require('url');
 
-var Accessory, Service, Characteristic, UUIDGen;
+var Accessory, Service, Characteristic, UUIDGen, allDeviceConfig;
 
 module.exports = function(homebridge) {
-  console.log("homebridge API version: " + homebridge.version);
-
   Accessory = homebridge.platformAccessory;
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   UUIDGen = homebridge.hap.uuid;
 
   homebridge.registerAccessory("homebridge-c4-plugin", "c4", c4Accessory);
+
+  allDeviceConfig = {
+    "light" : {
+      "state": {
+        "characteristic" : Characteristic.On,
+        "readOnly": false,
+        fromConverter: function(value) {
+          return value > 0 ;
+        },
+        toConverter: function(value) {
+          return value ? 1 : 0;
+        }
+      },
+      "level": {
+        "characteristic" : Characteristic.Brightness,
+        "readOnly": false,
+        fromConverter: function(value) {
+          return parseInt(value);
+        },
+        toConverter: function(value) {
+          return value;
+        }
+      }
+    }
+  };
 }
 
 function c4Accessory(log, config, api) {
   log("C4Plugin Init");
   this.log = log;
-  this.deviceType = config["device_type"] || "switch";
+  this.deviceType = config["device_type"] || "light";
   this.proxyID = config["proxy_id"];
   this.baseURL = config["base_url"];
-
-  this.levelVariableID = config["level_variable_id"];
-  this.hasLevel = config["has_level"] || "no";
-
-  this.stateVariableID = config["state_variable_id"];
-  this.hasState = config["has_state"] || "yes";
-
+  this.variableIDs = config["variable_ids"];
+  this.deviceConfig = allDeviceConfig[this.deviceType];
 
   this.refreshInterval = config["refresh_interval"] || 5000;
 
-  if (this.refreshInterval > 0 && this.hasState === "yes") {
+  if (this.refreshInterval > 0) {
     var statePoll = pollingtoevent(
       this.getState.bind(this),
       { interval: this.refreshInterval }
     );
-    statePoll.on("poll", function(value) {
-      this.skipUpdate = true;
-      switch(this.deviceType) {
-        case "light":
-          if (this.service) {
-            this.service.getCharacteristic(Characteristic.On)
-              .setValue(value);
-          }
-          break;
+    statePoll.on("poll", function(result) {
+      if (!this.service) {
+        return;
       }
+      if (!result) {
+        this.log.error("error fetching values");
+      }
+
+      this.skipUpdate = true;
+      for (var variableName in this.deviceConfig) {
+        if (!this.deviceConfig.hasOwnProperty(variableName)) {
+            continue;
+        }
+        this.service.getCharacteristic(this.deviceConfig[variableName].characteristic)
+          .setValue(result[variableName]);
+      }
+      this.lastResult = result;
       this.skipUpdate = false;
     }.bind(this));
     statePoll.on("error", function(error) {
-      this.log.error(error.message);
-    }.bind(this));
-  }
-  if (this.refreshInterval > 0 && this.hasLevel === "yes") {
-    var levelPoll = pollingtoevent(
-      this.getLevel.bind(this),
-      { interval: this.refreshInterval }
-    );
-    levelPoll.on("poll", function(value) {
-      this.skipUpdate = true;
-      switch(this.deviceType) {
-        case "light":
-          if (this.service) {
-            this.service.getCharacteristic(Characteristic.Brightness)
-    				  .setValue(value);
-          }
-          break;
-      }
-      this.skipUpdate = false;
-    }.bind(this));
-    levelPoll.on("error", function(error) {
       this.log.error(error.message);
     }.bind(this));
   }
@@ -92,115 +96,121 @@ c4Accessory.prototype.getServices = function() {
   switch (this.deviceType) {
     case "light":
       this.service = new Service.Lightbulb(this.name);
-      this.service
-        .getCharacteristic(Characteristic.On)
-        .on('get', this.getState.bind(this))
-        .on('set', this.setState.bind(this));
-
-      if (this.hasLevel == "yes") {
-        this.service
-          .addCharacteristic(new Characteristic.Brightness())
-          .on('get', this.getLevel.bind(this))
-          .on('set', this.setLevel.bind(this));
-      }
-      return [informationService, this.service];
+      break;
+    case "thermostat":
+      this.service = new Service.Thermostat(this.name);
+      break;
   }
-};
-
-c4Accessory.prototype.getLevel = function(callback) {
-  if (this.hasLevel !== 'yes') {
-    this.log.warn("Ignoring request - This device doesn't support level.");
-    callback(new Error("This device doesn't support level."));
-    return;
+  for (var variableName in this.deviceConfig) {
+    if (!this.deviceConfig.hasOwnProperty(variableName)) {
+      continue;
+    }
+    var characteristic = this.service.getCharacteristic(
+      this.deviceConfig[variableName].characteristic
+    );
+    characteristic.on('get', this.getStateVariable.bind(this, variableName));
+    if (!this.deviceConfig[variableName].readOnly) {
+      characteristic.on('set', this.setStateVariable.bind(this, variableName));
+    }
+    if (this.deviceConfig[variableName].props) {
+      characteristic.setProps(this.deviceConfig[variableName].props);
+    }
   }
-  getDeviceVariables(
-    this.baseURL,
-    this.proxyID,
-    [this.levelVariableID],
-    function(error, response) {
-      if (error) {
-        this.log.error("Get level function failed: " + error.message);
-        callback(error);
-      } else {
-        var level = parseInt(response[this.levelVariableID]);
-        this.log.debug("Level: " + level);
-        callback(null, level);
-      }
-    }.bind(this)
-  );
-};
-
-c4Accessory.prototype.setLevel = function(level, callback) {
-  if (this.skipUpdate) {
-    callback();
-    return;
-  }
-  setDeviceVariables(
-    this.baseURL,
-    this.proxyID,
-    [this.levelVariableID],
-    level,
-    function(error, response) {
-      if (error) {
-        this.log.error("Set level function failed: " + error.message);
-        callback(error);
-      } else if (response.success == "true") {
-        callback(null);
-      } else {
-        this.log.error("Unable to set level");
-        callback(new Error("Unable to set level"));
-      }
-    }.bind(this)
-  );
+  return [informationService, this.service];
 };
 
 c4Accessory.prototype.getState = function(callback) {
-  if (this.hasState !== 'yes') {
-    this.log.warn("Ignoring request - This device doesn't support state.");
-    callback(new Error("This device doesn't support state."));
-    return;
+  var variablesToFetch = [];
+  for (var variableName in this.deviceConfig) {
+    if (!this.deviceConfig.hasOwnProperty(variableName)) {
+      continue;
+    }
+    if (
+      this.variableIDs[variableName] &&
+      variablesToFetch.indexOf(this.variableIDs[variableName]) === -1
+    ) {
+      variablesToFetch.push(this.variableIDs[variableName]);
+    }
   }
+
   getDeviceVariables(
     this.baseURL,
     this.proxyID,
-    [this.stateVariableID],
+    variablesToFetch,
     function(error, response) {
       if (error) {
         this.log.error("Get state function failed: " + error.message);
         callback(error);
-      } else {
-        var state = response[this.stateVariableID] > 0 ;
-        this.log.debug("State: " + state);
-        callback(null, state);
+        return;
       }
+      var result = {};
+      for (var variableName in this.deviceConfig) {
+        if (!this.deviceConfig.hasOwnProperty(variableName)) {
+          continue;
+        }
+        if (this.deviceConfig[variableName].derived) {
+          // compute the derived in second iteration
+          continue;
+        }
+        result[variableName] = this.deviceConfig[variableName].fromConverter(
+          response[this.variableIDs[variableName]]
+        );
+      }
+      for (var variableName in this.deviceConfig) {
+        if (!this.deviceConfig.hasOwnProperty(variableName)) {
+          continue;
+        }
+        if (!this.deviceConfig[variableName].derived) {
+          // skip non-derived since already computed them
+          continue;
+        }
+        result[variableName] = this.deviceConfig[variableName].fromConverter(
+          response[this.variableIDs[variableName]],
+          result
+        );
+      }
+      callback(null, result);
     }.bind(this)
   );
 };
 
-c4Accessory.prototype.setState = function(newState, callback) {
+c4Accessory.prototype.getStateVariable = function(variableName, callback) {
+  this.getState(function(error, result) {
+    callback(error, result[this.variableIDs[variableName]]);
+  }.bind(this));
+};
+
+c4Accessory.prototype.setStateVariable = function(variableName, value, callback) {
   if (this.skipUpdate) {
     callback();
     return;
   }
-  setDeviceVariables(
+  var variableID = this.variableIDs[variableName];
+  if (this.deviceConfig[variableName].derived) {
+    variableID = this.deviceConfig[variableName].getVariableIDForSet(
+      value,
+      this.lastResult,
+      this.variableIDs
+    );
+  }
+  setDeviceVariable(
     this.baseURL,
     this.proxyID,
-    [this.stateVariableID],
-    newState ? 1 : 0,
+    variableID,
+    this.deviceConfig[variableName].toConverter(value),
     function(error, response) {
       if (error) {
-        this.log.error("Get state function failed: " + error.message);
+        this.log.error("Set variable function failed: " + error.message);
         callback(error);
       } else if (response.success == "true") {
         callback(null);
       } else {
-        this.log.error("Unable to set brightness");
-        callback(new Error("Unable to set brightness"));
+        this.log.error("Unable to set variable");
+        callback(new Error("Unable to set variable"));
       }
     }.bind(this)
   );
 };
-
 
 function getDeviceVariables(baseURL, proxyID, variableIDs, callback) {
   var deviceURL = url.parse(baseURL);
@@ -221,7 +231,7 @@ function getDeviceVariables(baseURL, proxyID, variableIDs, callback) {
   })
 };
 
-function setDeviceVariables(baseURL, proxyID, variableID, newValue, callback) {
+function setDeviceVariable(baseURL, proxyID, variableID, newValue, callback) {
   var deviceURL = url.parse(baseURL);
   deviceURL.query = {
     command: "set",
