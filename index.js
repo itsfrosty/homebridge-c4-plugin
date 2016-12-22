@@ -154,6 +154,10 @@ module.exports = function(homebridge) {
           maxValue: 100
         },
         fromConverter: function(value, result) {
+          if (!result) {
+            console.log('from converted undefined result')
+            return;
+          }
           var targetTemperature = null;
           var high = result["coolpoint"];
           var low = result["heatpoint"];
@@ -241,7 +245,6 @@ function c4Accessory(log, config, api) {
         this.service.getCharacteristic(this.deviceConfig[variableName].characteristic)
           .setValue(result[variableName]);
       }
-      this.lastResult = result;
       this.skipUpdate = false;
     }.bind(this));
     statePoll.on("error", function(error) {
@@ -290,7 +293,11 @@ c4Accessory.prototype.getServices = function() {
   return [informationService, this.service];
 };
 
-c4Accessory.prototype.getState = function(callback) {
+c4Accessory.prototype.getState = function(callback, useCached) {
+  if (useCached && this._lastResult) {
+    callback(null, this._lastResult);
+    return;
+  }
   var variablesToFetch = [];
   for (var variableName in this.deviceConfig) {
     if (!this.deviceConfig.hasOwnProperty(variableName)) {
@@ -340,6 +347,7 @@ c4Accessory.prototype.getState = function(callback) {
           result
         );
       }
+      this._lastResult = result;
       callback(null, result);
     }.bind(this)
   );
@@ -348,7 +356,7 @@ c4Accessory.prototype.getState = function(callback) {
 c4Accessory.prototype.getStateVariable = function(variableName, callback) {
   this.getState(function(error, result) {
     callback(error, result[this.variableIDs[variableName]]);
-  }.bind(this));
+  }.bind(this), true);
 };
 
 c4Accessory.prototype.setStateVariable = function(variableName, value, callback) {
@@ -360,7 +368,7 @@ c4Accessory.prototype.setStateVariable = function(variableName, value, callback)
   if (this.deviceConfig[variableName].derived) {
     variableID = this.deviceConfig[variableName].getVariableIDForSet(
       value,
-      this.lastResult,
+      this._lastResult,
       this.variableIDs
     );
   }
