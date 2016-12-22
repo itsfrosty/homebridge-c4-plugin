@@ -355,7 +355,7 @@ c4Accessory.prototype.getState = function(callback, useCached) {
 
 c4Accessory.prototype.getStateVariable = function(variableName, callback) {
   this.getState(function(error, result) {
-    callback(error, result[this.variableIDs[variableName]]);
+    callback(error, result[variableName]);
   }.bind(this), true);
 };
 
