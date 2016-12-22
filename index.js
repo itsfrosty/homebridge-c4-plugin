@@ -213,7 +213,7 @@ module.exports = function(homebridge) {
   };
 }
 
-function c4Accessory(log, config, api) {
+function c4Accessory(log, config) {
   log("C4Plugin Init");
   this.log = log;
   this.deviceType = config["device_type"] || "light";
@@ -221,8 +221,10 @@ function c4Accessory(log, config, api) {
   this.baseURL = config["base_url"];
   this.variableIDs = config["variable_ids"];
   this.deviceConfig = allDeviceConfig[this.deviceType];
+  this.name = config["name"];
 
   this.refreshInterval = config["refresh_interval"] || 5000;
+  this.computeService();
 
   if (this.refreshInterval > 0) {
     var statePoll = pollingtoevent(
@@ -261,12 +263,11 @@ c4Accessory.prototype.identify = function(callback) {
 };
 
 c4Accessory.prototype.getServices = function() {
-  var informationService = new Service.AccessoryInformation();
-  informationService
-    .setCharacteristic(Characteristic.Manufacturer, "Control4")
-    .setCharacteristic(Characteristic.Model, "Control4")
-    .setCharacteristic(Characteristic.SerialNumber, "213141");
+  return [this.service];
+}
 
+
+c4Accessory.prototype.computeService = function() {
   switch (this.deviceType) {
     case "light":
       this.service = new Service.Lightbulb(this.name);
@@ -290,7 +291,6 @@ c4Accessory.prototype.getServices = function() {
       characteristic.setProps(this.deviceConfig[variableName].props);
     }
   }
-  return [informationService, this.service];
 };
 
 c4Accessory.prototype.getState = function(callback, useCached) {
