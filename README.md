@@ -19,7 +19,7 @@ in your homebridge config.json.
 
 Known Issues:
 --------------
-- Updating thermostat mode is not working
+- Changing thermostat mode is not working
 
 
 Sample Homebridge Config:
