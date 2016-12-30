@@ -117,8 +117,8 @@ module.exports = function(homebridge) {
           format: Characteristic.Formats.INT,
           unit: Characteristic.Units.CELSIUS,
           minStep: 0.5,
-          minValue: 17,
-          maxValue: 27
+          minValue: 15,
+          maxValue: 30
         },
         fromConverter: function(value) {
           return fahrenheitToCelsius(parseInt(value));
@@ -133,8 +133,8 @@ module.exports = function(homebridge) {
           format: Characteristic.Formats.INT,
           unit: Characteristic.Units.CELSIUS,
           minStep: 0.5,
-          minValue: 17,
-          maxValue: 27
+          minValue: 15,
+          maxValue: 30
         },
         fromConverter: function(value) {
           return fahrenheitToCelsius(parseInt(value));
@@ -150,8 +150,8 @@ module.exports = function(homebridge) {
           format: Characteristic.Formats.INT,
           unit: Characteristic.Units.CELSIUS,
           minStep: 0.5,
-          minValue: 17,
-          maxValue: 27
+          minValue: 15,
+          maxValue: 30
         },
         fromConverter: function(value, result) {
           if (!result) {
