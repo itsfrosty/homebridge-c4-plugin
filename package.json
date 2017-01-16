@@ -1,6 +1,6 @@
 {
   "name": "homebridge-c4-plugin",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Homebridge plugin for control4",
   "main": "index.js",
   "scripts": {
@@ -27,6 +27,7 @@
   "homepage": "https://github.com/itsfrosty/homebridge-c4-plugin",
   "dependencies": {
     "polling-to-event": "^2.0.2",
-    "request": "^2.78.0"
+    "request": "^2.78.0",
+    "hap-nodejs": "0.4.20"
   }
 }

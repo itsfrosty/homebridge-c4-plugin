@@ -56,3 +56,12 @@ Sample Homebridge Config:
   }
 ]
 ~~~~
+
+Adding More Device types:
+-------------------------
+You need to add new device file similar to devices/light.js. For each variable
+the device supports, you need to the following:
+- Characteristic mapping from hap-nodejs
+- Value convertors from and to control4 values to homebridge values.
+
+In your device config, add the variableID in config.json for homebridge.
