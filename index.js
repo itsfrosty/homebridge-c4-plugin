@@ -1,6 +1,7 @@
 var request = require("request");
 var pollingtoevent = require('polling-to-event');
 var url = require('url');
+var Service = require("hap-nodejs").Service;
 var light = require('./devices/light');
 var thermostat = require('./devices/thermostat');
 
@@ -9,7 +10,10 @@ var allDeviceConfig = {
   "thermostat": thermostat
 };
 
+var Service;
+
 module.exports = function(homebridge) {
+  Service = homebridge.hap.Service;
   homebridge.registerAccessory("homebridge-c4-plugin", "c4", c4Accessory);
 }
 
